@@ -41,6 +41,8 @@ config.local.yaml
 
 # Project
 .claude/
+CLAUDE.md
+memory/
 
 # Model artifacts
 *.pkl
