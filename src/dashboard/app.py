@@ -15,6 +15,7 @@ if str(_ROOT) not in sys.path:
 import streamlit as st
 
 from src.config import load_config
+from src.dashboard.components.bracket import render_bracket_viewer
 from src.dashboard.components.bracket_view import render_predicted_bracket
 from src.dashboard.components.group_table import render_group_table
 from src.dashboard.components.team_card import render_team_card
@@ -23,7 +24,7 @@ from src.dashboard.components.win_probs import (
     render_stage_probability_heatmap,
     render_win_probability_chart,
 )
-from src.dashboard.data_cache import load_all_dashboard_data
+from src.dashboard.data_cache import load_all_dashboard_data, load_match_predictions
 from src.dashboard.pipeline_runner import (
     STEP_METADATA,
     STEPS,
@@ -460,6 +461,7 @@ st.session_state.setdefault("pipeline_data", {})
 st.session_state.setdefault("hyperparams", {})
 st.session_state.setdefault("reset_confirm", False)
 st.session_state.setdefault("winner_revealed", False)
+st.session_state.setdefault("bracket_revealed", False)
 
 # ── Dashboard display data (cached) ───────────────────────────────────────────
 data = load_all_dashboard_data(cfg)
@@ -496,10 +498,108 @@ with st.sidebar:
     st.caption("Model: XGBoost + Poisson GLM")
     st.caption("10,000 Monte Carlo simulations")
 
+# ── Hero Banner ───────────────────────────────────────────────────────────────
+st.markdown("""
+<div style="
+    background: linear-gradient(135deg, #0a0e1a 0%, #0d1829 40%, #091422 100%);
+    border: 1px solid #1e2d4a;
+    border-radius: 16px;
+    padding: 32px 40px 28px;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+">
+  <!-- Animated background shimmer -->
+  <div style="
+      position:absolute; inset:0; border-radius:16px;
+      background: linear-gradient(105deg,
+          transparent 20%, rgba(30,110,250,0.04) 40%,
+          rgba(30,110,250,0.08) 50%, rgba(30,110,250,0.04) 60%, transparent 80%);
+      animation: hero-shimmer 4s ease-in-out infinite;
+      pointer-events:none;
+  "></div>
+
+  <!-- Top label -->
+  <div style="
+      font-size:0.65rem; font-weight:700; letter-spacing:0.2em;
+      text-transform:uppercase; color:#1e6efa;
+      margin-bottom:10px; opacity:0;
+      animation: fade-up 0.5s ease 0.1s forwards;
+  ">
+    AI-Powered Prediction Engine
+  </div>
+
+  <!-- Main title -->
+  <div style="
+      font-size:2.6rem; font-weight:900; line-height:1.05;
+      letter-spacing:-0.02em; color:#e8eaf0;
+      opacity:0; animation: fade-up 0.55s ease 0.2s forwards;
+  ">
+    FIFA World Cup
+    <span style="
+        color:#1e6efa;
+        text-shadow: 0 0 30px rgba(30,110,250,0.5);
+    ">2026</span>
+  </div>
+
+  <!-- Hosts -->
+  <div style="
+      font-size:0.85rem; font-weight:500; color:#6b7a99;
+      margin-top:6px; letter-spacing:0.05em;
+      opacity:0; animation: fade-up 0.55s ease 0.32s forwards;
+  ">
+    United States &nbsp;·&nbsp; Canada &nbsp;·&nbsp; Mexico &nbsp;&nbsp;|&nbsp;&nbsp;
+    June 11 – July 19, 2026
+  </div>
+
+  <!-- Divider -->
+  <div style="
+      height:1px; background:linear-gradient(90deg,#1e6efa,transparent);
+      margin: 18px 0 16px;
+      opacity:0; animation: fade-up 0.4s ease 0.4s forwards;
+  "></div>
+
+  <!-- Stats row -->
+  <div style="
+      display:flex; gap:40px; flex-wrap:wrap;
+      opacity:0; animation: fade-up 0.5s ease 0.5s forwards;
+  ">
+    <div>
+      <div style="font-size:1.5rem;font-weight:800;color:#e8eaf0;line-height:1">48</div>
+      <div style="font-size:0.65rem;color:#6b7a99;text-transform:uppercase;letter-spacing:0.1em;margin-top:2px">Qualified Teams</div>
+    </div>
+    <div>
+      <div style="font-size:1.5rem;font-weight:800;color:#e8eaf0;line-height:1">49,000+</div>
+      <div style="font-size:0.65rem;color:#6b7a99;text-transform:uppercase;letter-spacing:0.1em;margin-top:2px">Historical Matches</div>
+    </div>
+    <div>
+      <div style="font-size:1.5rem;font-weight:800;color:#e8eaf0;line-height:1">10,000</div>
+      <div style="font-size:0.65rem;color:#6b7a99;text-transform:uppercase;letter-spacing:0.1em;margin-top:2px">Simulated Tournaments</div>
+    </div>
+    <div>
+      <div style="font-size:1.5rem;font-weight:800;color:#e8eaf0;line-height:1">XGBoost</div>
+      <div style="font-size:0.65rem;color:#6b7a99;text-transform:uppercase;letter-spacing:0.1em;margin-top:2px">+ Poisson GLM</div>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes hero-shimmer {
+  0%,100% { transform: translateX(-60%); }
+  50%      { transform: translateX(60%); }
+}
+@keyframes fade-up {
+  from { opacity:0; transform:translateY(12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ── Main tabs ─────────────────────────────────────────────────────────────────
-tab_win, tab_heat, tab_group, tab_team, tab_info, tab_pipe = st.tabs([
+tab_win, tab_heat, tab_bracket, tab_group, tab_team, tab_info, tab_pipe = st.tabs([
     "Win Probabilities",
     "Stage Heatmap",
+    "Bracket",
     "Group Stage",
     "Team Analysis",
     "Model Info",
@@ -575,7 +675,31 @@ with tab_heat:
     st.header("Stage-Reaching Probability Heatmap")
     render_stage_probability_heatmap(sim_results, top_n=top_n)
 
-# ── Tab 3: Group Stage ────────────────────────────────────────────────────────
+# ── Tab 3: Bracket ───────────────────────────────────────────────────────────
+with tab_bracket:
+    st.header("Tournament Bracket")
+    if not sim_results.empty and not teams.empty:
+        ml_predictions = load_match_predictions(cfg)
+        render_bracket_viewer(
+            sim_results, teams, elo_ratings,
+            match_predictions=ml_predictions,
+            revealed=st.session_state["bracket_revealed"],
+        )
+        # Reveal / hide button centred below the bracket
+        _bc1, _bc2, _bc3 = st.columns([2, 2, 2])
+        with _bc2:
+            if not st.session_state["bracket_revealed"]:
+                if st.button("Reveal Final & Champion", key="btn_bracket_reveal", use_container_width=True):
+                    st.session_state["bracket_revealed"] = True
+                    st.rerun()
+            else:
+                if st.button("Hide Final & Champion", key="btn_bracket_hide", use_container_width=True):
+                    st.session_state["bracket_revealed"] = False
+                    st.rerun()
+    else:
+        st.warning("No simulation results found. Run the pipeline first.")
+
+# ── Tab 4: Group Stage ────────────────────────────────────────────────────────
 with tab_group:
     st.header("Group Stage Breakdown")
     if not teams.empty:

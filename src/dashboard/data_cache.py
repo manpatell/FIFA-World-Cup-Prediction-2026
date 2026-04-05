@@ -101,6 +101,64 @@ def load_teams_df(_cfg: Config) -> pd.DataFrame:
     return load_teams(get_raw_path(_cfg, "teams"))
 
 
+@st.cache_data(show_spinner="Running ML predictions for all matchups...")
+def load_match_predictions(_cfg: Config) -> dict:
+    """Load trained models and pre-compute predictions for all team pairs.
+
+    Uses the same XGBoost + Poisson pipeline as the Monte Carlo simulation.
+    Results are cached so the bracket tab loads instantly after first visit.
+
+    Args:
+        _cfg: Config object.
+
+    Returns:
+        Dict mapping (home_team, away_team) →
+        (p_home_win, p_draw, p_away_win, lambda_home, lambda_away).
+        Returns empty dict if models or processed data are not available.
+    """
+    from src.config import get_model_path
+    from src.models.outcome_model import OutcomeModel
+    from src.models.goals_model import GoalsModel
+    from src.simulation.monte_carlo import precompute_match_predictions
+    from src.features.form import build_results_long
+    from src.features.elo import get_current_elo
+    from src.ingestion.loader import load_former_names, load_name_mapping
+
+    outcome_path = get_model_path(_cfg, "outcome_model")
+    home_path    = get_model_path(_cfg, "goals_model_home")
+    away_path    = get_model_path(_cfg, "goals_model_away")
+    results_path = get_processed_path(_cfg, "results_clean")
+    elo_path     = get_processed_path(_cfg, "elo_ratings")
+    squad_path   = get_processed_path(_cfg, "squad_features")
+
+    for p in (outcome_path, home_path, away_path, results_path, elo_path, squad_path):
+        if not p.exists():
+            return {}
+
+    outcome_model = OutcomeModel.load(outcome_path)
+    goals_model   = GoalsModel.load(_cfg.model, home_path, away_path)
+
+    results_long   = build_results_long(pd.read_parquet(results_path))
+    current_elo    = get_current_elo(pd.read_parquet(elo_path))
+    squad_features = pd.read_parquet(squad_path)
+
+    teams    = load_teams(get_raw_path(_cfg, "teams"))
+    nm       = load_name_mapping(get_raw_path(_cfg, "name_mapping"))
+    fn       = load_former_names(get_raw_path(_cfg, "former_names"))
+    resolver = build_name_resolver(nm, fn, teams)
+    rankings = normalize_rankings(load_rankings(get_raw_path(_cfg, "rankings")), resolver)
+
+    feature_kwargs = {
+        "elo_ratings":   current_elo,
+        "rankings":      rankings,
+        "squad_features": squad_features,
+        "results_long":  results_long,
+        "form_window":   _cfg.features.form_window,
+    }
+
+    return precompute_match_predictions(teams, feature_kwargs, outcome_model, goals_model)
+
+
 def clear_all_caches() -> None:
     """Clear all st.cache_data caches.
 
