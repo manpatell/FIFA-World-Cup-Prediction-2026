@@ -1,0 +1,60 @@
+# Data
+Data/raw/
+Data/processed/
+data/raw/
+data/processed/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+config.local.yaml
+
+# Project
+.claude/
+
+# Model artifacts
+*.pkl
+*.joblib
+*.onnx
+*.h5
+*.pt
+*.pth
+
+# Logs
+*.log
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Streamlit
+.streamlit/

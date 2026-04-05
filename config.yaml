@@ -1,0 +1,107 @@
+# ─── Paths ────────────────────────────────────────────────────────────────────
+paths:
+  data_raw: "data/raw"
+  data_processed: "data/processed"
+  models_dir: "models"
+  notebooks_dir: "notebooks"
+
+  # Raw source files (relative to data_raw)
+  results: "results.csv"
+  matches_2026: "matches.csv"
+  matches_wc: "matches_1930_2022.csv"
+  world_cup: "world_cup.csv"
+  rankings: "fifa_men_rankings_current.csv"
+  squad_values: "transfermarkt_squad_market_values.csv"
+  teams: "teams.csv"
+  player_profiles: "player_profiles.csv"
+  player_national: "player_national_performances.csv"
+  player_mv: "player_market_value.csv"
+  player_injuries: "player_injuries.csv"
+  goalscorers: "goalscorers.csv"
+  shootouts: "shootouts.csv"
+  team_details: "team_details.csv"
+  name_mapping: "name_mapping.csv"
+  former_names: "former_names.csv"
+  host_cities: "host_cities.csv"
+  tournament_stages: "tournament_stages.csv"
+  fbref_stats: "fbref_advanced_player_stats.csv"
+
+  # Processed outputs (relative to data_processed)
+  results_clean: "results_clean.parquet"
+  elo_ratings: "elo_ratings.parquet"
+  team_features: "team_features.parquet"
+  squad_features: "squad_features.parquet"
+  match_dataset: "match_dataset.parquet"
+  simulation_results: "simulation_results.parquet"
+
+  # Saved models (relative to models_dir)
+  outcome_model: "outcome_model.pkl"
+  goals_model_home: "goals_model_home.pkl"
+  goals_model_away: "goals_model_away.pkl"
+
+# ─── Elo Settings ─────────────────────────────────────────────────────────────
+elo:
+  initial_rating: 1500
+  k_factors:
+    "FIFA World Cup": 60
+    "FIFA World Cup qualification": 40
+    "UEFA Euro": 50
+    "UEFA Euro qualification": 40
+    "Copa América": 50
+    "Copa America": 50
+    "UEFA Nations League": 40
+    "African Cup of Nations": 40
+    "African Cup of Nations qualification": 30
+    "AFC Asian Cup": 35
+    "AFC Asian Cup qualification": 30
+    "Gold Cup": 35
+    "CONCACAF Nations League": 35
+    "FIFA Confederations Cup": 45
+    "Olympics Men's Tournament": 30
+    "Friendly": 20
+    "FIFA Series": 25
+    default: 30
+  home_advantage: 100
+  margin_of_victory_mult: true
+
+# ─── Feature Engineering ──────────────────────────────────────────────────────
+features:
+  form_window: 10
+  recent_years_weight: 5
+  wc_match_weight: 3.0
+  squad_top_n: 23
+  mv_snapshot_date: "2026-04-05"
+  injury_lookback_days: 90
+
+# ─── Model ────────────────────────────────────────────────────────────────────
+model:
+  random_seed: 42
+  test_size: 0.2
+  cv_folds: 5
+  training_data_cutoff: "2010-01-01"
+
+  xgboost:
+    n_estimators: 500
+    max_depth: 5
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    eval_metric: "mlogloss"
+    early_stopping_rounds: 50
+
+  poisson:
+    alpha: 0.1
+    max_iter: 300
+
+# ─── Simulation ───────────────────────────────────────────────────────────────
+simulation:
+  n_simulations: 10000
+  random_seed: 42
+  group_advance_top_n: 2
+  group_advance_3rd_n: 8
+  third_place_playoff: true
+
+# ─── Dashboard ────────────────────────────────────────────────────────────────
+dashboard:
+  title: "FIFA World Cup 2026 Predictor"
+  top_n_teams_display: 16
